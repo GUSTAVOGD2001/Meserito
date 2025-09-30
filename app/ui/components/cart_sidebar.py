@@ -9,15 +9,20 @@ class CartSidebar(QWidget):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.setFixedWidth(260)
+        self.setObjectName("cartSidebar")
         self.order_id: int | None = None
         self.list_widget = QListWidget()
+        self.list_widget.setObjectName("cartList")
         self.totals_label = QLabel("Total: $0.00")
+        self.totals_label.setObjectName("totalsLabel")
         self.checkout_button = QPushButton("Cerrar cuenta")
+        self.checkout_button.setObjectName("primaryButton")
 
         layout = QVBoxLayout(self)
-        header = QLabel("Cuenta actual")
-        header.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(header)
+        self.header = QLabel("Cuenta actual")
+        self.header.setObjectName("sidebarHeader")
+        self.header.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.header)
         layout.addWidget(self.list_widget)
         layout.addWidget(self.totals_label)
         layout.addWidget(self.checkout_button)

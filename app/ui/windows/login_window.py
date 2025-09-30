@@ -45,10 +45,17 @@ class LoginWindow(QMainWindow):
         title.setObjectName("titleLabel")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        subtitle = QLabel("Bienvenido, ingrese su PIN para continuar")
+        subtitle = QLabel("Sistema de gestión para restaurantes")
         subtitle.setObjectName("subtitleLabel")
         subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
         subtitle.setWordWrap(True)
+
+        user_label = QLabel("Código de empleado")
+        user_label.setObjectName("promptLabel")
+
+        self.user_edit = QLineEdit()
+        self.user_edit.setObjectName("userInput")
+        self.user_edit.setPlaceholderText("Ingrese su usuario")
 
         prompt_label = QLabel("Ingrese su PIN")
         prompt_label.setObjectName("promptLabel")
@@ -56,6 +63,7 @@ class LoginWindow(QMainWindow):
         self.pin_edit = QLineEdit()
         self.pin_edit.setObjectName("pinInput")
         self.pin_edit.setEchoMode(QLineEdit.EchoMode.Password)
+        self.pin_edit.setPlaceholderText("****")
 
         keypad_btn = QPushButton("Abrir teclado")
         keypad_btn.setObjectName("secondaryButton")
@@ -68,6 +76,8 @@ class LoginWindow(QMainWindow):
         card_layout.addWidget(title)
         card_layout.addWidget(subtitle)
         card_layout.addSpacing(10)
+        card_layout.addWidget(user_label)
+        card_layout.addWidget(self.user_edit)
         card_layout.addWidget(prompt_label)
         card_layout.addWidget(self.pin_edit)
         card_layout.addWidget(keypad_btn)
@@ -86,8 +96,6 @@ class LoginWindow(QMainWindow):
 
         self.setCentralWidget(background)
         self.setMinimumSize(640, 480)
-
-        self._apply_styles()
 
     def _open_keypad(self) -> None:
         dialog = KeypadDialog(parent=self)
@@ -112,82 +120,5 @@ class LoginWindow(QMainWindow):
         window.show()
         self._child_windows.append(window)
         self.pin_edit.clear()
+        self.user_edit.clear()
 
-    def _apply_styles(self) -> None:
-        self.setStyleSheet(
-            """
-            #backgroundWidget {
-                background: qlineargradient(
-                    x1: 0, y1: 0, x2: 1, y2: 1,
-                    stop: 0 #e3f2fd,
-                    stop: 1 #bbdefb
-                );
-                font-family: 'Segoe UI', 'Arial', sans-serif;
-            }
-
-            #loginCard {
-                background-color: #ffffff;
-                border-radius: 24px;
-            }
-
-            #titleLabel {
-                color: #0d47a1;
-                font-size: 36px;
-                font-weight: 700;
-                letter-spacing: 0.5px;
-            }
-
-            #subtitleLabel {
-                color: #1976d2;
-                font-size: 16px;
-            }
-
-            #promptLabel {
-                color: #0d47a1;
-                font-size: 15px;
-                font-weight: 600;
-            }
-
-            QLineEdit#pinInput {
-                padding: 14px 16px;
-                border-radius: 12px;
-                border: 2px solid #cfe2f3;
-                background: #f8fbff;
-                color: #0d47a1;
-                font-size: 18px;
-            }
-
-            QLineEdit#pinInput:focus {
-                border: 2px solid #1e88e5;
-                background: #ffffff;
-            }
-
-            QPushButton#primaryButton,
-            QPushButton#secondaryButton {
-                padding: 14px 18px;
-                border-radius: 14px;
-                font-size: 16px;
-                font-weight: 600;
-                border: 2px solid transparent;
-                background-color: #1e88e5;
-                color: #ffffff;
-            }
-
-            QPushButton#secondaryButton {
-                background-color: #1565c0;
-            }
-
-            QPushButton#primaryButton:hover,
-            QPushButton#secondaryButton:hover {
-                background-color: #ffffff;
-                color: #1e88e5;
-                border: 2px solid #1e88e5;
-            }
-
-            QPushButton#primaryButton:pressed,
-            QPushButton#secondaryButton:pressed {
-                background-color: #e3f2fd;
-                color: #0d47a1;
-            }
-            """
-        )

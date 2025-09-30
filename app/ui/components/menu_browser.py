@@ -18,16 +18,19 @@ from ...models import Category, MenuItem
 class MenuBrowser(QWidget):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
+        self.setObjectName("menuBrowser")
         self._items_by_category: dict[int, list[MenuItem]] = {}
         self.on_item_selected: Callable[[MenuItem], None] | None = None
 
         layout = QVBoxLayout(self)
         self.search = QLineEdit()
         self.search.setPlaceholderText("Buscar...")
+        self.search.setObjectName("searchInput")
         self.search.textChanged.connect(self._filter_items)
         layout.addWidget(self.search)
 
         self.tabs = QTabWidget()
+        self.tabs.setObjectName("menuTabs")
         layout.addWidget(self.tabs)
 
     def set_menu(self, categories: Iterable[Category], items: Iterable[MenuItem]) -> None:
@@ -40,10 +43,12 @@ class MenuBrowser(QWidget):
         for category in categories:
             widget = QWidget()
             grid = QGridLayout(widget)
+            grid.setSpacing(16)
             row = col = 0
             for menu_item in self._items_by_category.get(category.id, []):
                 button = QPushButton(f"{menu_item.name}\n${menu_item.price_cents/100:.2f}")
-                button.setMinimumHeight(60)
+                button.setObjectName("menuItemButton")
+                button.setMinimumSize(160, 110)
                 button.clicked.connect(
                     lambda checked=False, item=menu_item: self._handle_item_clicked(item)
                 )
