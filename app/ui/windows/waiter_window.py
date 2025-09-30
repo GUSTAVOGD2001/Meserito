@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
+from typing import Dict, List, Optional
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor
@@ -15,6 +15,7 @@ from PyQt6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QPushButton,
+    QScrollArea,
     QSpinBox,
     QVBoxLayout,
     QWidget,
@@ -22,17 +23,19 @@ from PyQt6.QtWidgets import (
 )
 
 from ...event_bus import event_bus
-from ...models import MenuItem, Table, Waiter
+from ...models import Table, Waiter
 from ...services import MenuService, OrderService, TableService, TicketService
 from ..components.cart_sidebar import CartSidebar
-from ..components.menu_browser import MenuBrowser
+from ..components.product_card import ProductCard
+from ..dialogs.add_product_dialog import AddProductDialog
 from ..components.table_widget import TableWidget
+from ..viewmodels import MenuItemInfo
 
 
 class QuantityDialog(QDialog):
     """Dialog to request the quantity of a selected product."""
 
-    def __init__(self, menu_item: MenuItem, parent: QWidget | None = None) -> None:
+    def __init__(self, menu_item: MenuItemInfo, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.menu_item = menu_item
         self.quantity = 1
@@ -107,6 +110,8 @@ class WaiterWindow(QMainWindow):
         self.selected_table_id: Optional[int] = None
         self.current_order_id: Optional[int] = None
         self.table_widgets: dict[int, TableWidget] = {}
+        self.menu_categories: List[tuple[int, str]] = []
+        self.menu_items_by_category: Dict[int, List[MenuItemInfo]] = {}
 
         event_bus.subscribe("table_status_changed", self._handle_table_event)
         event_bus.subscribe("order_updated", self._handle_order_event)
@@ -163,15 +168,30 @@ class WaiterWindow(QMainWindow):
         menu_title = QLabel("Menú del restaurante")
         menu_title.setObjectName("sectionTitle")
 
-        menu_hint = QLabel("Selecciona un producto para agregarlo al pedido")
+        menu_hint = QLabel(
+            "Explora el menú táctil y usa el botón para añadir productos al pedido"
+        )
         menu_hint.setObjectName("sectionSubtitle")
+        menu_hint.setWordWrap(True)
 
-        self.menu_browser = MenuBrowser()
-        self.menu_browser.on_item_selected = self._handle_menu_item
+        self.menu_scroll = QScrollArea()
+        self.menu_scroll.setObjectName("menuScroll")
+        self.menu_scroll.setWidgetResizable(True)
+        self.menu_grid_widget = QWidget()
+        self.menu_grid_layout = QVBoxLayout(self.menu_grid_widget)
+        self.menu_grid_layout.setContentsMargins(0, 0, 0, 0)
+        self.menu_grid_layout.setSpacing(24)
+        self.menu_scroll.setWidget(self.menu_grid_widget)
+
+        self.add_product_button = QPushButton("Añadir producto")
+        self.add_product_button.setObjectName("heroButton")
+        self.add_product_button.setMinimumHeight(64)
+        self.add_product_button.clicked.connect(self._open_add_product_dialog)
 
         menu_layout.addWidget(menu_title)
         menu_layout.addWidget(menu_hint)
-        menu_layout.addWidget(self.menu_browser)
+        menu_layout.addWidget(self.menu_scroll, 1)
+        menu_layout.addWidget(self.add_product_button)
 
         cart_card = QWidget()
         cart_card.setObjectName("contentCard")
@@ -339,25 +359,94 @@ class WaiterWindow(QMainWindow):
         try:
             menu_service = MenuService(session)
             categories = menu_service.list_categories(active_only=True)
-            items = []
-            for cat in categories:
-                items.extend(menu_service.list_items(category_id=cat.id))
+            self.menu_categories = [(cat.id, cat.name) for cat in categories]
+            self.menu_items_by_category = {
+                cat.id: [
+                    MenuItemInfo(
+                        id=item.id,
+                        name=item.name,
+                        price_cents=item.price_cents,
+                        category_id=item.category_id,
+                        image_path=item.image_path,
+                    )
+                    for item in menu_service.list_items(category_id=cat.id)
+                ]
+                for cat in categories
+            }
         finally:
             session.close()
-        self.menu_browser.set_menu(categories, items)
+        self._render_menu()
 
-    def _handle_menu_item(self, menu_item: MenuItem) -> None:
+    def _render_menu(self) -> None:
+        while self.menu_grid_layout.count():
+            item = self.menu_grid_layout.takeAt(0)
+            widget = item.widget()
+            if widget:
+                widget.deleteLater()
+        for category_id, name in self.menu_categories:
+            products = self.menu_items_by_category.get(category_id, [])
+            if not products:
+                continue
+            section = QWidget()
+            section.setObjectName("categorySection")
+            section_layout = QVBoxLayout(section)
+            section_layout.setContentsMargins(0, 0, 0, 0)
+            section_layout.setSpacing(12)
+
+            header = QLabel(name)
+            header.setObjectName("categoryLabel")
+
+            grid_widget = QWidget()
+            grid_layout = QGridLayout(grid_widget)
+            grid_layout.setSpacing(18)
+            grid_layout.setContentsMargins(0, 0, 0, 0)
+
+            for index, info in enumerate(products):
+                card = ProductCard(
+                    title=info.name,
+                    price_text=f"${info.price_cents / 100:.2f}",
+                    image_path=info.image_path,
+                )
+                card.clicked.connect(lambda checked=False, data=info: self._prompt_quantity(data))
+                row = index // 3
+                col = index % 3
+                grid_layout.addWidget(card, row, col)
+
+            section_layout.addWidget(header)
+            section_layout.addWidget(grid_widget)
+            self.menu_grid_layout.addWidget(section)
+
+        self.menu_grid_layout.addStretch(1)
+
+    def _prompt_quantity(self, menu_item: MenuItemInfo) -> None:
         if not self.selected_table_id or not self.current_order_id:
             QMessageBox.warning(self, "Meserito", "Seleccione una mesa y abra un pedido primero")
             return
         dialog = QuantityDialog(menu_item, self)
         if not dialog.exec():
             return
+        self._add_item_to_order(menu_item.id, dialog.quantity)
+
+    def _open_add_product_dialog(self) -> None:
+        if not self.selected_table_id or not self.current_order_id:
+            QMessageBox.warning(self, "Meserito", "Seleccione una mesa y abra un pedido primero")
+            return
+        dialog = AddProductDialog(self.session_factory, self)
+        if not dialog.exec():
+            return
+        selection = dialog.selected_item()
+        if not selection:
+            return
+        self._add_item_to_order(selection.id, dialog.quantity())
+
+    def _add_item_to_order(self, menu_item_id: int, quantity: int) -> None:
+        if not self.current_order_id or not self.selected_table_id:
+            return
         session = self.session_factory()
         try:
             order_service = OrderService(session)
             table_service = TableService(session)
-            order_service.add_item(self.current_order_id, menu_item.id, qty=dialog.quantity)
+            order_service.add_item(self.current_order_id, menu_item_id, qty=quantity)
             order_service.compute_totals(self.current_order_id)
             table_service.mark_occupied(self.selected_table_id)
             session.commit()

@@ -83,6 +83,7 @@ class MenuItem(Base):
     price_cents: Mapped[int] = mapped_column(Integer, nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text)
     is_active: Mapped[bool] = mapped_column(default=True)
+    image_path: Mapped[Optional[str]] = mapped_column(String(300))
 
     category: Mapped[Category] = relationship(back_populates="menu_items")
     order_items: Mapped[List["OrderItem"]] = relationship(back_populates="menu_item")

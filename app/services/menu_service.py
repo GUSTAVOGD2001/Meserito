@@ -71,6 +71,7 @@ class MenuService:
         price_cents: int,
         description: Optional[str] = None,
         is_active: bool = True,
+        image_path: Optional[str] = None,
     ) -> MenuItem:
         if price_cents < 0:
             raise ValidationError("El precio no puede ser negativo")
@@ -80,6 +81,7 @@ class MenuService:
             price_cents=price_cents,
             description=description,
             is_active=is_active,
+            image_path=image_path,
         )
         self.session.add(item)
         self.session.flush()
@@ -89,7 +91,7 @@ class MenuService:
         item = self.session.get(MenuItem, item_id)
         if not item:
             raise ValidationError("Platillo no encontrado")
-        for field in ("name", "price_cents", "description", "is_active", "category_id"):
+        for field in ("name", "price_cents", "description", "is_active", "category_id", "image_path"):
             if field in kwargs and kwargs[field] is not None:
                 if field == "price_cents" and kwargs[field] < 0:
                     raise ValidationError("El precio no puede ser negativo")
