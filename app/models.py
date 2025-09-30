@@ -1,10 +1,20 @@
 """SQLAlchemy models for Meserito."""
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import List, Optional
 
-from sqlalchemy import CheckConstraint, Enum, ForeignKey, Integer, String, Text, func
+from sqlalchemy import (
+    CheckConstraint,
+    Date,
+    Enum,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base
@@ -21,6 +31,9 @@ class Waiter(Base):
     created_at: Mapped[datetime] = mapped_column(default=func.now(), nullable=False)
 
     orders: Mapped[List["Order"]] = relationship(back_populates="waiter")
+    daily_sales: Mapped[List["OrdersByWaiter"]] = relationship(
+        back_populates="waiter", cascade="all, delete-orphan"
+    )
 
 
 class Table(Base):
@@ -44,6 +57,9 @@ class Table(Base):
     )
     orders: Mapped[List["Order"]] = relationship(
         "Order", back_populates="table", foreign_keys="Order.table_id"
+    )
+    daily_sales: Mapped[List["OrdersByTable"]] = relationship(
+        back_populates="table", cascade="all, delete-orphan"
     )
 
 
@@ -159,6 +175,54 @@ class AuditLog(Base):
     created_at: Mapped[datetime] = mapped_column(default=func.now(), nullable=False)
 
 
+class OrdersByDay(Base):
+    """Aggregated sales totals per calendar day."""
+
+    __tablename__ = "orders_by_day"
+
+    date: Mapped[date] = mapped_column(Date, primary_key=True)
+    total_orders: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    total_cents: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+    __table_args__ = (Index("ix_orders_by_day_date", "date"),)
+
+
+class OrdersByWaiter(Base):
+    """Aggregated sales totals per waiter and day."""
+
+    __tablename__ = "orders_by_waiter"
+
+    date: Mapped[date] = mapped_column(Date, primary_key=True)
+    waiter_id: Mapped[int] = mapped_column(ForeignKey("waiters.id"), primary_key=True)
+    total_orders: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    total_cents: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+    waiter: Mapped[Waiter] = relationship(back_populates="daily_sales")
+
+    __table_args__ = (
+        Index("ix_orders_by_waiter_date", "date"),
+        Index("ix_orders_by_waiter_waiter_id", "waiter_id"),
+    )
+
+
+class OrdersByTable(Base):
+    """Aggregated sales totals per table and day."""
+
+    __tablename__ = "orders_by_table"
+
+    date: Mapped[date] = mapped_column(Date, primary_key=True)
+    table_id: Mapped[int] = mapped_column(ForeignKey("tables.id"), primary_key=True)
+    total_orders: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    total_cents: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+    table: Mapped[Table] = relationship(back_populates="daily_sales")
+
+    __table_args__ = (
+        Index("ix_orders_by_table_date", "date"),
+        Index("ix_orders_by_table_table_id", "table_id"),
+    )
+
+
 __all__ = [
     "Waiter",
     "Table",
@@ -169,4 +233,7 @@ __all__ = [
     "Ticket",
     "Setting",
     "AuditLog",
+    "OrdersByDay",
+    "OrdersByWaiter",
+    "OrdersByTable",
 ]
