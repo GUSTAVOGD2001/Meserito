@@ -1,0 +1,6 @@
+PyQt6
+SQLAlchemy>=2.0
+reportlab
+python-dateutil
+pydantic>=2
+alembic
