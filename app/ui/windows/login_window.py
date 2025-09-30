@@ -50,13 +50,6 @@ class LoginWindow(QMainWindow):
         subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
         subtitle.setWordWrap(True)
 
-        user_label = QLabel("Código de empleado")
-        user_label.setObjectName("promptLabel")
-
-        self.user_edit = QLineEdit()
-        self.user_edit.setObjectName("userInput")
-        self.user_edit.setPlaceholderText("Ingrese su usuario")
-
         prompt_label = QLabel("Ingrese su PIN")
         prompt_label.setObjectName("promptLabel")
 
@@ -76,8 +69,6 @@ class LoginWindow(QMainWindow):
         card_layout.addWidget(title)
         card_layout.addWidget(subtitle)
         card_layout.addSpacing(10)
-        card_layout.addWidget(user_label)
-        card_layout.addWidget(self.user_edit)
         card_layout.addWidget(prompt_label)
         card_layout.addWidget(self.pin_edit)
         card_layout.addWidget(keypad_btn)
@@ -120,5 +111,4 @@ class LoginWindow(QMainWindow):
         window.show()
         self._child_windows.append(window)
         self.pin_edit.clear()
-        self.user_edit.clear()
 

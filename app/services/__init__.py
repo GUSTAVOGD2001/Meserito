@@ -6,6 +6,7 @@ from .order_service import OrderService
 from .report_service import ReportService
 from .table_service import TableService
 from .ticket_service import TicketService
+from .waiter_service import WaiterService
 
 __all__ = [
     "AuthService",
@@ -16,5 +17,6 @@ __all__ = [
     "ReportService",
     "TableService",
     "TicketService",
+    "WaiterService",
     "ValidationError",
 ]

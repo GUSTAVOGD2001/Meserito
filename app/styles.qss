@@ -18,6 +18,12 @@ QWidget#dialogCard {
     border-radius: 28px;
 }
 
+QWidget#formCard {
+    background-color: #ffffff;
+    border-radius: 24px;
+    border: 2px solid #e3f2fd;
+}
+
 QWidget#dialogCard {
     min-width: 360px;
 }
@@ -35,6 +41,12 @@ QLabel#subtitleLabel {
 }
 
 QLabel#sectionTitle {
+    color: #0d47a1;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+QLabel#categoryLabel {
     color: #0d47a1;
     font-size: 20px;
     font-weight: 600;
@@ -91,6 +103,31 @@ QSpinBox#quantitySpin {
 QSpinBox#quantitySpin:focus {
     border: 2px solid #1e88e5;
     background: #ffffff;
+}
+
+QDoubleSpinBox#priceSpin,
+QComboBox#comboInput {
+    padding: 14px 16px;
+    border-radius: 16px;
+    border: 2px solid #d6e4ff;
+    background: #f7faff;
+    font-size: 16px;
+}
+
+QDoubleSpinBox#priceSpin:focus,
+QComboBox#comboInput:focus {
+    border: 2px solid #1e88e5;
+    background: #ffffff;
+}
+
+QComboBox#comboInput::drop-down {
+    border: none;
+    width: 32px;
+}
+
+QComboBox#comboInput::down-arrow {
+    image: none;
+    background: transparent;
 }
 
 QPushButton#primaryButton,
@@ -151,10 +188,37 @@ QPushButton#menuItemButton:pressed {
     color: #0d47a1;
 }
 
+QPushButton#heroButton {
+    background-color: #0d47a1;
+    color: #ffffff;
+    border-radius: 32px;
+    padding: 24px 36px;
+    font-size: 20px;
+    font-weight: 700;
+    border: none;
+}
+
+QPushButton#heroButton:hover {
+    background-color: #1565c0;
+}
+
+QPushButton#heroButton:pressed {
+    background-color: #bbdefb;
+    color: #0d47a1;
+}
+
 QListWidget#cartList {
     border: none;
     background: #f7faff;
     border-radius: 20px;
+    padding: 12px;
+}
+
+QListWidget#managerList,
+QListWidget#employeeList {
+    background: #f7faff;
+    border: 2px solid #d6e4ff;
+    border-radius: 18px;
     padding: 12px;
 }
 
@@ -198,4 +262,42 @@ QScrollBar::handle:vertical {
 QScrollBar::add-line:vertical,
 QScrollBar::sub-line:vertical {
     height: 0;
+}
+
+QScrollArea#menuScroll {
+    border: none;
+    background: transparent;
+}
+
+QScrollArea#menuScroll > QWidget > QWidget {
+    background: transparent;
+}
+
+QFrame#productCard {
+    background: #f7faff;
+    border-radius: 24px;
+    border: 2px solid transparent;
+}
+
+QFrame#productCard[selected="true"] {
+    border-color: #1565c0;
+    background: #e3f2fd;
+}
+
+QLabel#productName {
+    font-size: 16px;
+    font-weight: 600;
+    color: #0d47a1;
+}
+
+QLabel#productPrice {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1565c0;
+}
+
+QLabel#productImage,
+QLabel#imagePreview {
+    background: #e3f2fd;
+    border-radius: 20px;
 }
