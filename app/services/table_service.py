@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..event_bus import event_bus
-from ..models import Order, Table
+from ..models import Order, OrdersByDay, OrdersByTable, OrdersByWaiter, Table
 from .exceptions import DomainError
 
 
@@ -70,6 +70,7 @@ class TableService:
         order.closed_at = datetime.utcnow()
         table.current_order_id = None
         table.status = "free"
+        self._update_order_aggregations(order)
         self.session.flush()
         event_bus.publish("table_status_changed", {"table_id": table.id, "status": table.status})
         return order
@@ -79,3 +80,45 @@ class TableService:
         table.status = "occupied"
         self.session.flush()
         event_bus.publish("table_status_changed", {"table_id": table.id, "status": table.status})
+
+    def _update_order_aggregations(self, order: Order) -> None:
+        """Persist aggregated totals for a closed order."""
+
+        if order.status != "closed":  # Safety net for callers
+            return
+
+        order_date = (order.closed_at or datetime.utcnow()).date()
+        total_cents = order.total_cents
+
+        day_row = self.session.get(OrdersByDay, order_date)
+        if not day_row:
+            day_row = OrdersByDay(date=order_date, total_orders=0, total_cents=0)
+            self.session.add(day_row)
+        day_row.total_orders += 1
+        day_row.total_cents += total_cents
+
+        waiter_key = (order_date, order.waiter_id)
+        waiter_row = self.session.get(OrdersByWaiter, waiter_key)
+        if not waiter_row:
+            waiter_row = OrdersByWaiter(
+                date=order_date,
+                waiter_id=order.waiter_id,
+                total_orders=0,
+                total_cents=0,
+            )
+            self.session.add(waiter_row)
+        waiter_row.total_orders += 1
+        waiter_row.total_cents += total_cents
+
+        table_key = (order_date, order.table_id)
+        table_row = self.session.get(OrdersByTable, table_key)
+        if not table_row:
+            table_row = OrdersByTable(
+                date=order_date,
+                table_id=order.table_id,
+                total_orders=0,
+                total_cents=0,
+            )
+            self.session.add(table_row)
+        table_row.total_orders += 1
+        table_row.total_cents += total_cents

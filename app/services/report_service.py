@@ -1,7 +1,30 @@
-"""Reporting utilities."""
+"""Reporting utilities.
+
+Example usage of the aggregated models::
+
+    session.execute(
+        select(OrdersByDay.date, OrdersByDay.total_cents)
+        .where(OrdersByDay.date.between(start, end))
+        .order_by(OrdersByDay.date)
+    )
+
+    session.execute(
+        select(Waiter.name, func.sum(OrdersByWaiter.total_cents))
+        .join(OrdersByWaiter, OrdersByWaiter.waiter_id == Waiter.id)
+        .where(OrdersByWaiter.date.between(start, end))
+        .group_by(Waiter.name)
+    )
+
+    session.execute(
+        select(Table.number, func.sum(OrdersByTable.total_cents))
+        .join(OrdersByTable, OrdersByTable.table_id == Table.id)
+        .where(OrdersByTable.date.between(start, end))
+        .group_by(Table.number)
+    )
+"""
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date
 from pathlib import Path
 from typing import Iterable, List, Tuple
 
@@ -9,7 +32,13 @@ import csv
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from ..models import Order, Table, Waiter
+from ..models import (
+    OrdersByDay,
+    OrdersByTable,
+    OrdersByWaiter,
+    Table,
+    Waiter,
+)
 
 
 class ReportService:
@@ -18,42 +47,26 @@ class ReportService:
 
     def sales_by_day(self, start: date, end: date) -> List[Tuple[date, int]]:
         stmt = (
-            select(func.date(Order.closed_at), func.sum(Order.total_cents))
-            .where(
-                Order.status == "closed",
-                Order.closed_at.is_not(None),
-                Order.closed_at >= datetime.combine(start, datetime.min.time()),
-                Order.closed_at <= datetime.combine(end, datetime.max.time()),
-            )
-            .group_by(func.date(Order.closed_at))
-            .order_by(func.date(Order.closed_at))
+            select(OrdersByDay.date, OrdersByDay.total_cents)
+            .where(OrdersByDay.date >= start, OrdersByDay.date <= end)
+            .order_by(OrdersByDay.date)
         )
         return [(row[0], row[1] or 0) for row in self.session.execute(stmt)]
 
     def sales_by_waiter(self, start: date, end: date) -> List[Tuple[str, int]]:
         stmt = (
-            select(Waiter.name, func.sum(Order.total_cents))
-            .join(Order.waiter)
-            .where(
-                Order.status == "closed",
-                Order.closed_at.is_not(None),
-                Order.closed_at >= datetime.combine(start, datetime.min.time()),
-                Order.closed_at <= datetime.combine(end, datetime.max.time()),
-            )
+            select(Waiter.name, func.sum(OrdersByWaiter.total_cents))
+            .join(OrdersByWaiter, OrdersByWaiter.waiter_id == Waiter.id)
+            .where(OrdersByWaiter.date >= start, OrdersByWaiter.date <= end)
             .group_by(Waiter.name)
         )
         return [(row[0], row[1] or 0) for row in self.session.execute(stmt)]
 
     def sales_by_table(self, start: date, end: date) -> List[Tuple[int, int]]:
         stmt = (
-            select(Table.number, func.sum(Order.total_cents))
-            .join(Order.table)
-            .where(
-                Order.status == "closed",
-                Order.closed_at.is_not(None),
-                Order.closed_at >= datetime.combine(start, datetime.min.time()),
-                Order.closed_at <= datetime.combine(end, datetime.max.time()),
-            )
+            select(Table.number, func.sum(OrdersByTable.total_cents))
+            .join(OrdersByTable, OrdersByTable.table_id == Table.id)
+            .where(OrdersByTable.date >= start, OrdersByTable.date <= end)
             .group_by(Table.number)
         )
         return [(row[0], row[1] or 0) for row in self.session.execute(stmt)]
