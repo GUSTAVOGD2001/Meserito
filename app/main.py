@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 
 from PyQt6.QtWidgets import QApplication
 from sqlalchemy import select
@@ -67,6 +68,9 @@ def main() -> int:
     seed_database()
 
     app = QApplication(sys.argv)
+    stylesheet_path = Path(__file__).resolve().parent / "styles.qss"
+    if stylesheet_path.exists():
+        app.setStyleSheet(stylesheet_path.read_text(encoding="utf-8"))
     session = SessionLocal()
     auth_service = AuthService(session)
     window = LoginWindow(auth_service, SessionLocal)
