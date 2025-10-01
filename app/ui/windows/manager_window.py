@@ -40,9 +40,9 @@ class ManagerWindow(QMainWindow):
         self.setMinimumSize(1200, 720)
 
         central = QWidget()
-        central.setObjectName("backgroundWidget")
+        central.setObjectName("AdminPanel")
         main_layout = QVBoxLayout(central)
-        main_layout.setContentsMargins(48, 48, 48, 48)
+        main_layout.setContentsMargins(40, 40, 40, 40)
         main_layout.setSpacing(32)
 
         title = QLabel("Meserito")
@@ -54,7 +54,7 @@ class ManagerWindow(QMainWindow):
         subtitle.setAlignment(Qt.AlignmentFlag.AlignLeft)
 
         actions_card = QWidget()
-        actions_card.setObjectName("contentCard")
+        actions_card.setObjectName("AdminCard")
         actions_layout = QHBoxLayout(actions_card)
         actions_layout.setContentsMargins(32, 32, 32, 32)
         actions_layout.setSpacing(24)
@@ -74,13 +74,14 @@ class ManagerWindow(QMainWindow):
         actions_layout.addStretch(1)
 
         tabs_card = QWidget()
-        tabs_card.setObjectName("contentCard")
+        tabs_card.setObjectName("AdminCard")
         tabs_layout = QVBoxLayout(tabs_card)
         tabs_layout.setContentsMargins(24, 24, 24, 24)
         tabs_layout.setSpacing(16)
 
         self.tabs = QTabWidget()
         self.tabs.setObjectName("managerTabs")
+        self.tabs.setDocumentMode(True)
         tabs_layout.addWidget(self.tabs)
 
         main_layout.addWidget(title)
@@ -100,6 +101,7 @@ class ManagerWindow(QMainWindow):
         fp_layout.addWidget(self.floorplan)
         add_table_btn = QPushButton("Agregar mesa")
         add_table_btn.setObjectName("primaryButton")
+        add_table_btn.setMinimumHeight(48)
         add_table_btn.clicked.connect(self._add_table)
         fp_layout.addWidget(add_table_btn, alignment=Qt.AlignmentFlag.AlignRight)
         self.tabs.addTab(floorplan_tab, "Plano")
@@ -124,10 +126,12 @@ class ManagerWindow(QMainWindow):
 
         add_cat = QPushButton("Agregar categoría")
         add_cat.setObjectName("primaryButton")
+        add_cat.setMinimumHeight(48)
         add_cat.clicked.connect(self._add_category)
 
         toggle_cat = QPushButton("Activar/Desactivar")
         toggle_cat.setObjectName("secondaryButton")
+        toggle_cat.setMinimumHeight(48)
         toggle_cat.clicked.connect(self._toggle_category)
 
         left_layout.addWidget(categories_title)
@@ -149,10 +153,12 @@ class ManagerWindow(QMainWindow):
 
         add_item = QPushButton("Agregar platillo")
         add_item.setObjectName("primaryButton")
+        add_item.setMinimumHeight(48)
         add_item.clicked.connect(self._add_item)
 
         toggle_item = QPushButton("Activar/Desactivar platillo")
         toggle_item.setObjectName("secondaryButton")
+        toggle_item.setMinimumHeight(48)
         toggle_item.clicked.connect(self._toggle_item)
 
         right_layout.addWidget(items_title)
@@ -181,6 +187,7 @@ class ManagerWindow(QMainWindow):
         date_layout.addWidget(self.end_date)
         refresh = QPushButton("Generar")
         refresh.setObjectName("primaryButton")
+        refresh.setMinimumHeight(48)
         refresh.clicked.connect(self._refresh_reports)
         date_layout.addWidget(refresh)
 
@@ -189,6 +196,7 @@ class ManagerWindow(QMainWindow):
 
         export_btn = QPushButton("Exportar CSV")
         export_btn.setObjectName("secondaryButton")
+        export_btn.setMinimumHeight(48)
         export_btn.clicked.connect(self._export_reports)
 
         rep_layout.addWidget(reports_title)
@@ -223,9 +231,9 @@ class ManagerWindow(QMainWindow):
 
     def _apply_shadow(self, widget: QWidget) -> None:
         shadow = QGraphicsDropShadowEffect(self)
-        shadow.setBlurRadius(36)
-        shadow.setOffset(0, 20)
-        shadow.setColor(QColor(30, 136, 229, 70))
+        shadow.setBlurRadius(28)
+        shadow.setOffset(0, 18)
+        shadow.setColor(QColor(23, 111, 200, 40))
         widget.setGraphicsEffect(shadow)
 
     def _add_table(self) -> None:

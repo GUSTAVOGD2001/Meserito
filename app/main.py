@@ -4,6 +4,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+from PyQt6.QtGui import QColor, QFont, QPalette
 from PyQt6.QtWidgets import QApplication
 from sqlalchemy import select
 
@@ -11,6 +12,68 @@ from .db import Base, SessionLocal, engine
 from .models import Category, MenuItem, Table, Waiter
 from .services import AuthService
 from .ui.windows.login_window import LoginWindow
+
+
+def apply_theme(app: QApplication) -> None:
+    """Apply a bright, legible theme with comfortable control sizes."""
+    palette = QPalette()
+    palette.setColor(QPalette.ColorRole.Window, QColor("#f5f8ff"))
+    palette.setColor(QPalette.ColorRole.WindowText, QColor("#0b1e3f"))
+    palette.setColor(QPalette.ColorRole.Base, QColor("#ffffff"))
+    palette.setColor(QPalette.ColorRole.AlternateBase, QColor("#f0f4ff"))
+    palette.setColor(QPalette.ColorRole.ToolTipBase, QColor("#ffffff"))
+    palette.setColor(QPalette.ColorRole.ToolTipText, QColor("#0b1e3f"))
+    palette.setColor(QPalette.ColorRole.Text, QColor("#0b1e3f"))
+    palette.setColor(QPalette.ColorRole.Button, QColor("#ffffff"))
+    palette.setColor(QPalette.ColorRole.ButtonText, QColor("#0b1e3f"))
+    palette.setColor(QPalette.ColorRole.Highlight, QColor("#1e88e5"))
+    palette.setColor(QPalette.ColorRole.HighlightedText, QColor("#ffffff"))
+    palette.setColor(QPalette.ColorRole.PlaceholderText, QColor(11, 30, 63, 120))
+    app.setPalette(palette)
+
+    base_font = QFont("Poppins", 11)
+    base_font.setStyleStrategy(QFont.StyleStrategy.PreferAntialias)
+    app.setFont(base_font)
+
+    base_stylesheet = """
+    QWidget {
+        font-size: 15px;
+    }
+    QPushButton,
+    QToolButton {
+        min-height: 44px;
+        padding: 12px 20px;
+        border-radius: 14px;
+        font-size: 15px;
+    }
+    QPushButton:disabled,
+    QToolButton:disabled {
+        opacity: 0.6;
+    }
+    QTabBar::tab {
+        min-height: 40px;
+        padding: 10px 18px;
+        font-size: 15px;
+        border-radius: 12px;
+        margin: 0 4px;
+    }
+    QTabBar::tab:selected {
+        background: #ffffff;
+        color: #1565c0;
+    }
+    QTabWidget::pane {
+        border: 1px solid #d7e3ff;
+        border-radius: 16px;
+        background: #ffffff;
+        padding: 8px;
+    }
+    """
+
+    stylesheet_path = Path(__file__).resolve().parent / "styles.qss"
+    styles = [base_stylesheet]
+    if stylesheet_path.exists():
+        styles.append(stylesheet_path.read_text(encoding="utf-8"))
+    app.setStyleSheet("\n".join(styles))
 
 
 def seed_database() -> None:
@@ -69,9 +132,7 @@ def main() -> int:
     seed_database()
 
     app = QApplication(sys.argv)
-    stylesheet_path = Path(__file__).resolve().parent / "styles.qss"
-    if stylesheet_path.exists():
-        app.setStyleSheet(stylesheet_path.read_text(encoding="utf-8"))
+    apply_theme(app)
     session = SessionLocal()
     auth_service = AuthService(session)
     window = LoginWindow(auth_service, SessionLocal)
