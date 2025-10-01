@@ -4,144 +4,79 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from PyQt6.QtGui import QColor, QFont, QPalette
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtCore import QEvent, QObject, Qt
+from PyQt6.QtGui import QFont, QGuiApplication
+from PyQt6.QtWidgets import QApplication, QHeaderView, QTableView, QTableWidget
 from sqlalchemy import select
 
-from .db import Base, SessionLocal, engine
+from .db import Base, SessionLocal, engine, run_migrations
 from .models import Category, MenuItem, Table, Waiter
 from .services import AuthService
 from .ui.windows.login_window import LoginWindow
 
 
+class _HeaderAutoResizer(QObject):
+    """Ensure table headers resize contents for better readability."""
+
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # pragma: no cover - GUI hook
+        if event.type() == QEvent.Type.Show and isinstance(watched, (QTableView, QTableWidget)):
+            header = watched.horizontalHeader()
+            if header is not None:
+                header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+                header.setStretchLastSection(True)
+        return super().eventFilter(watched, event)
+
+
 def apply_theme(app: QApplication) -> None:
-    """Apply the requested dark theme and consistent control metrics."""
-    palette = QPalette()
-    background = QColor("#121212")
-    surface = QColor("#1f1f1f")
-    text = QColor("#ececec")
-    accent = QColor("#1e88e5")
-    # Paleta oscura para mejorar contraste en toda la app.
-    palette.setColor(QPalette.ColorRole.Window, background)
-    palette.setColor(QPalette.ColorRole.WindowText, text)
-    palette.setColor(QPalette.ColorRole.Base, surface)
-    palette.setColor(QPalette.ColorRole.AlternateBase, QColor("#181818"))
-    palette.setColor(QPalette.ColorRole.ToolTipBase, surface)
-    palette.setColor(QPalette.ColorRole.ToolTipText, text)
-    palette.setColor(QPalette.ColorRole.Text, text)
-    palette.setColor(QPalette.ColorRole.Button, surface)
-    palette.setColor(QPalette.ColorRole.ButtonText, text)
-    palette.setColor(QPalette.ColorRole.Highlight, accent)
-    palette.setColor(QPalette.ColorRole.HighlightedText, QColor("#ffffff"))
-    palette.setColor(QPalette.ColorRole.PlaceholderText, QColor(236, 236, 236, 110))
-    app.setPalette(palette)
+    """Apply high-contrast Meserito dark theme and control metrics."""
 
     base_font = QFont("Poppins", 11)
+    base_font.setHintingPreference(QFont.HintingPreference.PreferFullHinting)
     base_font.setStyleStrategy(QFont.StyleStrategy.PreferAntialias)
     app.setFont(base_font)
 
-    base_stylesheet = """
-    * {
-        color: #ECECEC;
-        background-color: transparent;
-    }
-    QWidget {
-        font-size: 15px;
-        background-color: #121212;
-    }
-    QFrame#menuArea,
-    QFrame#orderPanel,
-    QWidget#dialogCard,
-    QWidget#loginCard,
-    QWidget#AdminCard,
-    QWidget#formCard {
-        background-color: #1f1f1f;
-        border-radius: 18px;
-        border: 1px solid #2c2c2c;
-    }
-    QPushButton,
-    QToolButton {
-        min-height: 38px;
-        padding: 8px 16px;
-        border-radius: 8px;
-        font-size: 15px;
-        background-color: #1e88e5;
-        color: #ECECEC;
-        border: 1px solid #1e88e5;
-    }
-    QPushButton:disabled,
-    QToolButton:disabled {
-        background-color: #2c2c2c;
-        border-color: #2c2c2c;
-        color: rgba(236, 236, 236, 120);
-    }
-    QPushButton:hover,
-    QToolButton:hover {
-        background-color: #42a5f5;
-        border-color: #42a5f5;
-    }
-    QPushButton:pressed,
-    QToolButton:pressed {
-        background-color: #1565c0;
-        border-color: #1565c0;
-    }
-    QLineEdit,
-    QComboBox,
-    QSpinBox,
-    QTextEdit,
-    QPlainTextEdit {
-        min-height: 34px;
-        padding: 6px 12px;
-        border-radius: 8px;
-        background-color: #181818;
-        border: 1px solid #2c2c2c;
-        color: #ECECEC;
-        selection-background-color: #1e88e5;
-    }
-    QTabBar::tab {
-        min-height: 38px;
-        padding: 8px 16px;
-        border-radius: 8px;
-        margin: 0 4px;
-        background-color: #1f1f1f;
-        color: #ECECEC;
-    }
-    QTabBar::tab:selected {
-        background-color: #263238;
-        color: #ECECEC;
-    }
-    QTabWidget::pane {
-        border: 1px solid #2c2c2c;
-        border-radius: 12px;
-        padding: 8px;
-    }
-    QHeaderView::section {
-        background-color: #1f1f1f;
-        color: #ECECEC;
-        padding: 8px;
-        border: none;
-        border-bottom: 1px solid #2c2c2c;
-    }
-    QTableView,
-    QTableWidget {
-        background-color: #181818;
-        gridline-color: #2c2c2c;
-        alternate-background-color: #1f1f1f;
-    }
-    QListWidget,
-    QTreeWidget,
-    QScrollArea {
-        background-color: transparent;
-    }
-    """
-
     stylesheet_path = Path(__file__).resolve().parent / "styles.qss"
-    styles = []
+    styles: list[str] = []
     if stylesheet_path.exists():
         styles.append(stylesheet_path.read_text(encoding="utf-8"))
-    # Añadimos la hoja de estilo oscura al final para asegurar prioridad.
+
+    base_stylesheet = """
+    * { color: #E9EEF5; }
+    QMainWindow, QWidget { background: #0F1216; }
+    QGroupBox, QFrame, QTabWidget::pane { background: #161A20; border: 1px solid #1C222B; border-radius: 12px; }
+    QPushButton { background: #1E66FF; border: none; border-radius: 12px; min-height: 40px; padding: 10px 16px; font-weight: 600; }
+    QPushButton:hover { background: #2A70FF; }
+    QPushButton:pressed { background: #1556D0; }
+    QPushButton:disabled { background: #2A3550; color: #9BA7B4; }
+    QLineEdit, QComboBox, QTextEdit, QPlainTextEdit, QSpinBox { background: #0F1216; border: 1px solid #273140; border-radius: 10px; min-height: 36px; padding: 6px 10px; }
+    QHeaderView::section { background: #1C222B; color: #E9EEF5; padding: 6px; border: none; }
+    QTabBar::tab { background: #161A20; padding: 8px 14px; margin-right: 6px; border-radius: 10px; }
+    QTabBar::tab:selected { background: #1C222B; }
+    QLabel[heading="true"] { font-size: 22px; font-weight: 800; color: #E9EEF5; }
+    .QSuccess { background: #1DB954; }
+    .QWarn { background: #FF9800; }
+    .QDanger { background: #EF4444; }
+    QListView, QTreeView, QTableView, QTableWidget { background: #0F1216; alternate-background-color: #161A20; gridline-color: #1C222B; }
+    QScrollBar:vertical { background: #161A20; width: 12px; margin: 2px; }
+    QScrollBar::handle:vertical { background: #273140; border-radius: 6px; }
+    """
     styles.append(base_stylesheet)
     app.setStyleSheet("\n".join(styles))
+
+    resizer = _HeaderAutoResizer(app)
+    app.installEventFilter(resizer)
+    app._meserito_header_resizer = resizer  # type: ignore[attr-defined]
+    # TODO: Persist custom table sizing preferences per view.
+
+
+def _enable_high_dpi() -> None:
+    """Turn on the High-DPI flags to avoid blurred UI on modern displays."""
+
+    QGuiApplication.setHighDpiScaleFactorRoundingPolicy(
+        Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
+    )
+    QApplication.setAttribute(Qt.ApplicationAttribute.AA_EnableHighDpiScaling, True)
+    QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseHighDpiPixmaps, True)
 
 
 def seed_database() -> None:
@@ -197,7 +132,10 @@ def seed_database() -> None:
 
 def main() -> int:
     Base.metadata.create_all(bind=engine)
+    run_migrations()
     seed_database()
+
+    _enable_high_dpi()
 
     app = QApplication(sys.argv)
     apply_theme(app)

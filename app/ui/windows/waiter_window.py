@@ -1,23 +1,28 @@
 """Modern POS-style main window for waiters."""
 from __future__ import annotations
 
+from datetime import datetime
 from functools import partial
-from pathlib import Path
 from typing import Dict, List, Optional
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
+    QButtonGroup,
     QComboBox,
     QDialog,
+    QDialogButtonBox,
+    QFormLayout,
     QFrame,
     QGridLayout,
     QHBoxLayout,
     QInputDialog,
     QLabel,
+    QLineEdit,
     QMainWindow,
     QMessageBox,
     QPushButton,
+    QRadioButton,
     QScrollArea,
     QSpinBox,
     QVBoxLayout,
@@ -28,6 +33,7 @@ from PyQt6.QtWidgets import (
 from ...event_bus import event_bus
 from ...models import Table, Waiter
 from ...services import MenuService, OrderService, TableService, TicketService
+from ...printing.ticket import ensure_ticket_output_path
 from ..components.product_card import ProductCard
 from ..viewmodels import MenuItemInfo
 
@@ -143,6 +149,87 @@ class QuantityDialog(QDialog):
 
     def _confirm(self) -> None:
         self.quantity = self.spin_box.value()
+        self.accept()
+
+
+class PaymentDialog(QDialog):
+    """Ask the waiter to select the payment method and optional card data."""
+
+    def __init__(self, total_cents: int, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Forma de pago")
+        self.setModal(True)
+
+        self.payment_type: Optional[str] = None
+        self.card_last4: Optional[str] = None
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(16)
+
+        heading = QLabel("Selecciona la forma de pago")
+        heading.setProperty("heading", True)
+        heading.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(heading)
+
+        subtitle = QLabel(f"Total a cobrar: ${total_cents / 100:.2f}")
+        subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(subtitle)
+
+        form = QFormLayout()
+        form.setFormAlignment(Qt.AlignmentFlag.AlignLeft)
+
+        self.button_group = QButtonGroup(self)
+        self.cash_radio = QRadioButton("Efectivo")
+        self.card_radio = QRadioButton("Tarjeta")
+        self.button_group.addButton(self.cash_radio)
+        self.button_group.addButton(self.card_radio)
+        self.cash_radio.setChecked(True)
+
+        form.addRow(self.cash_radio)
+        form.addRow(self.card_radio)
+
+        self.card_last4_input = QLineEdit()
+        self.card_last4_input.setMaxLength(4)
+        self.card_last4_input.setPlaceholderText("Últimos 4 (opcional)")
+        self.card_last4_input.setEnabled(False)
+        form.addRow("Terminación", self.card_last4_input)
+
+        layout.addLayout(form)
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Ok
+        )
+        buttons.accepted.connect(self._accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+        self.card_radio.toggled.connect(self._toggle_card_input)
+        # TODO: Permitir agregar propina al flujo de pago.
+
+    def _toggle_card_input(self, checked: bool) -> None:
+        self.card_last4_input.setEnabled(checked)
+        if not checked:
+            self.card_last4_input.clear()
+
+    def _accept(self) -> None:
+        selected_button = self.button_group.checkedButton()
+        if not selected_button:
+            QMessageBox.warning(self, "Meserito", "Selecciona una forma de pago")
+            return
+        self.payment_type = selected_button.text()
+        if self.payment_type == "Tarjeta":
+            value = self.card_last4_input.text().strip()
+            if value and (len(value) != 4 or not value.isdigit()):
+                QMessageBox.warning(
+                    self,
+                    "Meserito",
+                    "Los últimos 4 dígitos deben contener exactamente 4 números",
+                )
+                return
+            self.card_last4 = value or None
+        else:
+            self.card_last4 = None
         self.accept()
 
 
@@ -412,19 +499,41 @@ class WaiterWindow(QMainWindow):
             order_service = OrderService(session)
             table_service = TableService(session)
             order = order_service.compute_totals(self.current_order_id)
+            active_items = [item for item in order.items if item.status != "void"]
+            if not active_items or order.total_cents <= 0:
+                QMessageBox.information(
+                    self,
+                    "Meserito",
+                    "Agrega productos a la orden antes de finalizar",
+                )
+                return
+
+            dialog = PaymentDialog(order.total_cents, self)
+            if not dialog.exec():
+                return
+
+            payment_type = dialog.payment_type or "Efectivo"
+            card_last4 = dialog.card_last4
             closed_order = table_service.close_order(
                 self.selected_table_id,
-                payment_method="efectivo",
+                payment_method=payment_type.lower(),
                 payment_amount_cents=order.total_cents,
+                payment_type=payment_type,
+                card_last4=card_last4,
             )
             ticket_service = TicketService(session)
-            output = Path("tickets") / f"ticket_{order.id}.pdf"
-            ticket_service.generate_pdf(closed_order.id, output, ticket_type="cliente")
+            timestamp = closed_order.closed_at or datetime.utcnow()
+            output = ensure_ticket_output_path(timestamp, closed_order.id)
+            ticket_path = ticket_service.generate_pdf(
+                closed_order.id,
+                output,
+                ticket_type="cliente",
+            )
             session.commit()
             QMessageBox.information(
                 self,
                 "Meserito",
-                f"Cuenta cerrada. Ticket guardado en {output}"
+                f"Cuenta cerrada. Ticket guardado en {ticket_path}"
             )
         except Exception as exc:
             session.rollback()
@@ -441,14 +550,22 @@ class WaiterWindow(QMainWindow):
         try:
             order_service = OrderService(session)
             order = order_service.compute_totals(self.current_order_id)
+            if order.total_cents <= 0:
+                QMessageBox.information(
+                    self,
+                    "Meserito",
+                    "La orden no tiene importe para imprimir",
+                )
+                return
             ticket_service = TicketService(session)
-            output = Path("tickets") / f"ticket_{order.id}.pdf"
-            ticket_service.generate_pdf(order.id, output)
+            timestamp = order.closed_at or datetime.utcnow()
+            output = ensure_ticket_output_path(timestamp, order.id, ensure_closed=False)
+            ticket_path = ticket_service.generate_pdf(order.id, output)
             session.commit()
             QMessageBox.information(
                 self,
                 "Meserito",
-                f"Ticket generado en {output}"
+                f"Ticket generado en {ticket_path}"
             )
         except Exception as exc:
             session.rollback()
