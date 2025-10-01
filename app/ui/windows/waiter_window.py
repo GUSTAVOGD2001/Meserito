@@ -5,7 +5,7 @@ from functools import partial
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from PyQt6.QtCore import Qt, QSize, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
     QComboBox,
@@ -20,7 +20,6 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QScrollArea,
     QSpinBox,
-    QStyle,
     QVBoxLayout,
     QWidget,
     QGraphicsDropShadowEffect,
@@ -155,8 +154,18 @@ class WaiterWindow(QMainWindow):
         self.waiter = waiter
         self.session_factory = session_factory
         self.current_waiter_id = waiter.id
-        self.current_waiter_name = waiter.name
-        self.setWindowTitle(f"Meserito — Mesero {waiter.name}")
+        display_name = waiter.name or getattr(waiter, "username", "")
+        if not display_name:
+            display_name = getattr(waiter, "pin", "")
+        self.waiter_display_name = display_name
+        # Guardar el rol para aplicar reglas de visibilidad sin referenciar tarjetas inútiles.
+        self.waiter_role = getattr(
+            waiter,
+            "role",
+            "admin" if getattr(waiter, "is_manager", False) else "waiter",
+        )
+        # Mostrar el nombre del mesero en el título como pidió el product owner.
+        self.setWindowTitle(f"Meserito — Mesero: {self.waiter_display_name}")
         self.selected_table_id: Optional[int] = None
         self.current_order_id: Optional[int] = None
         self.tables_by_id: Dict[int, Table] = {}
@@ -182,55 +191,18 @@ class WaiterWindow(QMainWindow):
         main_layout.setContentsMargins(24, 24, 24, 24)
         main_layout.setSpacing(24)
 
-        # Sidebar navigation
-        self.sidebar = QFrame()
-        self.sidebar.setObjectName("sidebar")
-        self.sidebar.setFixedWidth(120)
-        sidebar_layout = QVBoxLayout(self.sidebar)
-        sidebar_layout.setContentsMargins(12, 24, 12, 24)
-        sidebar_layout.setSpacing(12)
-
-        self.session_label = QLabel(f"Sesión: {self.current_waiter_name}")
-        self.session_label.setObjectName("sessionLabel")
-        self.session_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.session_label.setWordWrap(True)
-
-        self.role_label = QLabel("Mesero")
-        self.role_label.setObjectName("sessionRoleLabel")
-        self.role_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        sidebar_layout.addWidget(self.session_label)
-        sidebar_layout.addWidget(self.role_label)
-        sidebar_layout.addSpacing(12)
-
-        style = self.style()
-        nav_items = [
-            ("Menú", QStyle.StandardPixmap.SP_FileDialogContentsView),
-            ("Órdenes", QStyle.StandardPixmap.SP_FileDialogDetailedView),
-            ("Historial", QStyle.StandardPixmap.SP_DialogOpenButton),
-            ("Reportes", QStyle.StandardPixmap.SP_ComputerIcon),
-            ("Configuración", QStyle.StandardPixmap.SP_FileDialogListView),
-        ]
-        self.sidebar_buttons: List[QPushButton] = []
-        for index, (text, icon_enum) in enumerate(nav_items):
-            button = QPushButton(text)
-            button.setObjectName("sidebarButton")
-            button.setFlat(True)
-            button.setCursor(Qt.CursorShape.PointingHandCursor)
-            button.setIcon(style.standardIcon(icon_enum))
-            button.setIconSize(QSize(24, 24))
-            if index == 0:
-                button.setProperty("active", True)
-            sidebar_layout.addWidget(button)
-            self.sidebar_buttons.append(button)
-        sidebar_layout.addStretch(1)
-
-        # Central menu area
+        # Áreas principales sin la tarjeta lateral inútil.
         self.menu_area = QFrame()
         self.menu_area.setObjectName("menuArea")
         menu_layout = QVBoxLayout(self.menu_area)
         menu_layout.setContentsMargins(24, 24, 24, 24)
         menu_layout.setSpacing(18)
+
+        # Badge discreto para mostrar quién está logueado sin usar la tarjeta eliminada.
+        role_label = "Administrador" if self.waiter_role == "admin" else "Mesero"
+        session_badge = QLabel(f"{role_label}: {self.waiter_display_name}")
+        session_badge.setObjectName("sessionLabel")
+        session_badge.setAlignment(Qt.AlignmentFlag.AlignRight)
 
         title = QLabel("Menú de productos")
         title.setObjectName("posTitle")
@@ -263,6 +235,7 @@ class WaiterWindow(QMainWindow):
             self.products_layout.setColumnStretch(column, 1)
         self.products_scroll.setWidget(self.products_widget)
 
+        menu_layout.addWidget(session_badge, 0, alignment=Qt.AlignmentFlag.AlignRight)
         menu_layout.addWidget(title)
         menu_layout.addWidget(subtitle)
         menu_layout.addWidget(self.category_scroll)
@@ -356,9 +329,8 @@ class WaiterWindow(QMainWindow):
         order_layout.addWidget(self.print_button)
         order_layout.addWidget(self.finalize_button)
 
-        main_layout.addWidget(self.sidebar, 0)
-        main_layout.addWidget(self.menu_area, 1)
-        main_layout.addWidget(self.order_panel, 0)
+        main_layout.addWidget(self.menu_area, 3)
+        main_layout.addWidget(self.order_panel, 2)
 
         self.setCentralWidget(central)
         central.setStyleSheet(central.styleSheet() + "\nQScrollBar:horizontal { height: 0px; }")

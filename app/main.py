@@ -15,20 +15,25 @@ from .ui.windows.login_window import LoginWindow
 
 
 def apply_theme(app: QApplication) -> None:
-    """Apply a bright, legible theme with comfortable control sizes."""
+    """Apply the requested dark theme and consistent control metrics."""
     palette = QPalette()
-    palette.setColor(QPalette.ColorRole.Window, QColor("#f5f8ff"))
-    palette.setColor(QPalette.ColorRole.WindowText, QColor("#0b1e3f"))
-    palette.setColor(QPalette.ColorRole.Base, QColor("#ffffff"))
-    palette.setColor(QPalette.ColorRole.AlternateBase, QColor("#f0f4ff"))
-    palette.setColor(QPalette.ColorRole.ToolTipBase, QColor("#ffffff"))
-    palette.setColor(QPalette.ColorRole.ToolTipText, QColor("#0b1e3f"))
-    palette.setColor(QPalette.ColorRole.Text, QColor("#0b1e3f"))
-    palette.setColor(QPalette.ColorRole.Button, QColor("#ffffff"))
-    palette.setColor(QPalette.ColorRole.ButtonText, QColor("#0b1e3f"))
-    palette.setColor(QPalette.ColorRole.Highlight, QColor("#1e88e5"))
+    background = QColor("#121212")
+    surface = QColor("#1f1f1f")
+    text = QColor("#ececec")
+    accent = QColor("#1e88e5")
+    # Paleta oscura para mejorar contraste en toda la app.
+    palette.setColor(QPalette.ColorRole.Window, background)
+    palette.setColor(QPalette.ColorRole.WindowText, text)
+    palette.setColor(QPalette.ColorRole.Base, surface)
+    palette.setColor(QPalette.ColorRole.AlternateBase, QColor("#181818"))
+    palette.setColor(QPalette.ColorRole.ToolTipBase, surface)
+    palette.setColor(QPalette.ColorRole.ToolTipText, text)
+    palette.setColor(QPalette.ColorRole.Text, text)
+    palette.setColor(QPalette.ColorRole.Button, surface)
+    palette.setColor(QPalette.ColorRole.ButtonText, text)
+    palette.setColor(QPalette.ColorRole.Highlight, accent)
     palette.setColor(QPalette.ColorRole.HighlightedText, QColor("#ffffff"))
-    palette.setColor(QPalette.ColorRole.PlaceholderText, QColor(11, 30, 63, 120))
+    palette.setColor(QPalette.ColorRole.PlaceholderText, QColor(236, 236, 236, 110))
     app.setPalette(palette)
 
     base_font = QFont("Poppins", 11)
@@ -36,43 +41,106 @@ def apply_theme(app: QApplication) -> None:
     app.setFont(base_font)
 
     base_stylesheet = """
+    * {
+        color: #ECECEC;
+        background-color: transparent;
+    }
     QWidget {
         font-size: 15px;
+        background-color: #121212;
+    }
+    QFrame#menuArea,
+    QFrame#orderPanel,
+    QWidget#dialogCard,
+    QWidget#loginCard,
+    QWidget#AdminCard,
+    QWidget#formCard {
+        background-color: #1f1f1f;
+        border-radius: 18px;
+        border: 1px solid #2c2c2c;
     }
     QPushButton,
     QToolButton {
-        min-height: 44px;
-        padding: 12px 20px;
-        border-radius: 14px;
+        min-height: 38px;
+        padding: 8px 16px;
+        border-radius: 8px;
         font-size: 15px;
+        background-color: #1e88e5;
+        color: #ECECEC;
+        border: 1px solid #1e88e5;
     }
     QPushButton:disabled,
     QToolButton:disabled {
-        opacity: 0.6;
+        background-color: #2c2c2c;
+        border-color: #2c2c2c;
+        color: rgba(236, 236, 236, 120);
+    }
+    QPushButton:hover,
+    QToolButton:hover {
+        background-color: #42a5f5;
+        border-color: #42a5f5;
+    }
+    QPushButton:pressed,
+    QToolButton:pressed {
+        background-color: #1565c0;
+        border-color: #1565c0;
+    }
+    QLineEdit,
+    QComboBox,
+    QSpinBox,
+    QTextEdit,
+    QPlainTextEdit {
+        min-height: 34px;
+        padding: 6px 12px;
+        border-radius: 8px;
+        background-color: #181818;
+        border: 1px solid #2c2c2c;
+        color: #ECECEC;
+        selection-background-color: #1e88e5;
     }
     QTabBar::tab {
-        min-height: 40px;
-        padding: 10px 18px;
-        font-size: 15px;
-        border-radius: 12px;
+        min-height: 38px;
+        padding: 8px 16px;
+        border-radius: 8px;
         margin: 0 4px;
+        background-color: #1f1f1f;
+        color: #ECECEC;
     }
     QTabBar::tab:selected {
-        background: #ffffff;
-        color: #1565c0;
+        background-color: #263238;
+        color: #ECECEC;
     }
     QTabWidget::pane {
-        border: 1px solid #d7e3ff;
-        border-radius: 16px;
-        background: #ffffff;
+        border: 1px solid #2c2c2c;
+        border-radius: 12px;
         padding: 8px;
+    }
+    QHeaderView::section {
+        background-color: #1f1f1f;
+        color: #ECECEC;
+        padding: 8px;
+        border: none;
+        border-bottom: 1px solid #2c2c2c;
+    }
+    QTableView,
+    QTableWidget {
+        background-color: #181818;
+        gridline-color: #2c2c2c;
+        alternate-background-color: #1f1f1f;
+    }
+    QListWidget,
+    QTreeWidget,
+    QScrollArea {
+        background-color: transparent;
     }
     """
 
     stylesheet_path = Path(__file__).resolve().parent / "styles.qss"
-    styles = [base_stylesheet]
+    styles = []
     if stylesheet_path.exists():
         styles.append(stylesheet_path.read_text(encoding="utf-8"))
+    # Añadimos la hoja de estilo oscura al final para asegurar prioridad.
+    styles.append(base_stylesheet)
     app.setStyleSheet("\n".join(styles))
 
 

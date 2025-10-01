@@ -203,8 +203,8 @@ class ManagerWindow(QMainWindow):
         ])
         header = self.report_table.horizontalHeader()
         header.setStretchLastSection(True)
-        header.setDefaultSectionSize(160)
-        header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+        header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        # Ajuste para que el contenido no se corte en los listados.
         self.report_table.verticalHeader().setDefaultSectionSize(32)
 
         export_btn = QPushButton("Exportar CSV")
