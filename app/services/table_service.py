@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..event_bus import event_bus
-from ..models import Order, OrdersByDay, OrdersByTable, OrdersByWaiter, Table
+from ..models import Order, OrdersByDay, OrdersByTable, OrdersByWaiter, Payment, Table
 from .exceptions import DomainError
 
 
@@ -59,7 +59,12 @@ class TableService:
         event_bus.publish("table_status_changed", {"table_id": table.id, "status": table.status})
         return order
 
-    def close_order(self, table_id: int) -> Order:
+    def close_order(
+        self,
+        table_id: int,
+        payment_method: str | None = None,
+        payment_amount_cents: int | None = None,
+    ) -> Order:
         table = self.get_table(table_id)
         if not table.current_order_id:
             raise DomainError("La mesa no tiene un pedido activo")
@@ -71,6 +76,10 @@ class TableService:
         table.current_order_id = None
         table.status = "free"
         self._update_order_aggregations(order)
+        if payment_method:
+            amount = payment_amount_cents if payment_amount_cents is not None else order.total_cents
+            payment = Payment(order_id=order.id, method=payment_method, amount_cents=amount)
+            self.session.add(payment)
         self.session.flush()
         event_bus.publish("table_status_changed", {"table_id": table.id, "status": table.status})
         return order

@@ -10,6 +10,7 @@ from PyQt6.QtWidgets import (
     QDateEdit,
     QGraphicsDropShadowEffect,
     QHBoxLayout,
+    QHeaderView,
     QLabel,
     QListWidget,
     QListWidgetItem,
@@ -191,8 +192,20 @@ class ManagerWindow(QMainWindow):
         refresh.clicked.connect(self._refresh_reports)
         date_layout.addWidget(refresh)
 
-        self.report_table = QTableWidget(0, 3)
-        self.report_table.setHorizontalHeaderLabels(["Fecha/Mesero/Mesa", "Total", "Tipo"])
+        self.report_table = QTableWidget(0, 6)
+        self.report_table.setHorizontalHeaderLabels([
+            "Fecha",
+            "Mesa",
+            "Mesero",
+            "Total",
+            "Tipo",
+            "Ticket",
+        ])
+        header = self.report_table.horizontalHeader()
+        header.setStretchLastSection(True)
+        header.setDefaultSectionSize(160)
+        header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+        self.report_table.verticalHeader().setDefaultSectionSize(32)
 
         export_btn = QPushButton("Exportar CSV")
         export_btn.setObjectName("secondaryButton")
@@ -205,6 +218,8 @@ class ManagerWindow(QMainWindow):
         rep_layout.addWidget(export_btn, alignment=Qt.AlignmentFlag.AlignRight)
 
         self.tabs.addTab(reports_tab, "Reportes")
+
+        self.report_rows: list[dict] = []
 
         self._load_tables()
         self._load_categories()
@@ -387,20 +402,20 @@ class ManagerWindow(QMainWindow):
             service = ReportService(session)
             start = self.start_date.date().toPyDate()
             end = self.end_date.date().toPyDate()
-            day_rows = service.sales_by_day(start, end)
-            waiter_rows = service.sales_by_waiter(start, end)
-            table_rows = service.sales_by_table(start, end)
+            rows = service.closed_orders_report(start, end)
         finally:
             session.close()
-        data = []
-        data.extend([(str(d), total, "Día") for d, total in day_rows])
-        data.extend([(name, total, "Mesero") for name, total in waiter_rows])
-        data.extend([(str(number), total, "Mesa") for number, total in table_rows])
-        self.report_table.setRowCount(len(data))
-        for row_idx, (label, total, kind) in enumerate(data):
-            self.report_table.setItem(row_idx, 0, QTableWidgetItem(label))
-            self.report_table.setItem(row_idx, 1, QTableWidgetItem(f"${total/100:.2f}"))
-            self.report_table.setItem(row_idx, 2, QTableWidgetItem(kind))
+        self.report_rows = rows
+        self.report_table.setRowCount(len(rows))
+        for row_idx, entry in enumerate(rows):
+            self.report_table.setItem(row_idx, 0, QTableWidgetItem(entry["fecha"]))
+            self.report_table.setItem(row_idx, 1, QTableWidgetItem(entry["mesa"]))
+            self.report_table.setItem(row_idx, 2, QTableWidgetItem(entry["mesero"]))
+            total_item = QTableWidgetItem(f"${entry['total_cents']/100:.2f}")
+            total_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            self.report_table.setItem(row_idx, 3, total_item)
+            self.report_table.setItem(row_idx, 4, QTableWidgetItem(entry["metodo"]))
+            self.report_table.setItem(row_idx, 5, QTableWidgetItem(entry["ticket"]))
 
     def _export_reports(self) -> None:
         session = self.session_factory()
@@ -408,9 +423,9 @@ class ManagerWindow(QMainWindow):
             service = ReportService(session)
             start = self.start_date.date().toPyDate()
             end = self.end_date.date().toPyDate()
-            rows = service.sales_by_day(start, end)
-            path = Path("reportes") / "ventas_dia.csv"
-            service.export_to_csv(rows, ["Fecha", "Total"], path)
+            rows = service.closed_orders_report(start, end)
+            path = Path("reportes") / "historial_ordenes.csv"
+            service.export_closed_orders_csv(rows, path)
             QMessageBox.information(self, "Meserito", f"Reporte exportado a {path}")
         except Exception as exc:
             session.rollback()

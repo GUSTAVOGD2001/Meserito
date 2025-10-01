@@ -422,10 +422,14 @@ class WaiterWindow(QMainWindow):
             order_service = OrderService(session)
             table_service = TableService(session)
             order = order_service.compute_totals(self.current_order_id)
-            closed_order = table_service.close_order(self.selected_table_id)
+            closed_order = table_service.close_order(
+                self.selected_table_id,
+                payment_method="efectivo",
+                payment_amount_cents=order.total_cents,
+            )
             ticket_service = TicketService(session)
             output = Path("tickets") / f"ticket_{order.id}.pdf"
-            ticket_service.generate_pdf(closed_order.id, output)
+            ticket_service.generate_pdf(closed_order.id, output, ticket_type="cliente")
             session.commit()
             QMessageBox.information(
                 self,
