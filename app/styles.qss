@@ -7,6 +7,25 @@ QMainWindow {
     background-color: #edf3ff;
 }
 
+QWidget#AdminPanel {
+    background: #f5f8ff;
+    border-radius: 32px;
+}
+
+QWidget#AdminPanel QLabel {
+    color: #0b1e3f;
+}
+
+QWidget#AdminPanel QLabel#titleLabel {
+    font-size: 32px;
+    font-weight: 700;
+}
+
+QWidget#AdminPanel QLabel#subtitleLabel {
+    font-size: 16px;
+    color: #345b97;
+}
+
 QWidget#posBackground,
 QWidget#backgroundWidget {
     background: qlineargradient(
@@ -27,8 +46,8 @@ QPushButton#sidebarButton {
     border: none;
     color: #1a3c80;
     font-weight: 600;
-    font-size: 14px;
-    padding: 12px 8px;
+    font-size: 15px;
+    padding: 14px 10px;
     border-radius: 18px;
     text-align: left;
 }
@@ -50,6 +69,49 @@ QWidget#dialogCard {
     background: #ffffff;
     border-radius: 28px;
     border: 1px solid #d7e3ff;
+}
+
+QWidget#AdminCard {
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid #d4e0f4;
+    padding: 24px;
+}
+
+QWidget#AdminPanel QTabBar::tab {
+    background: transparent;
+    border: none;
+    color: #3f5f94;
+}
+
+QWidget#AdminPanel QTabBar::tab:selected {
+    background: #ffffff;
+    border: 1px solid #cddbf3;
+    color: #1565c0;
+}
+
+QWidget#AdminPanel QTabWidget::pane {
+    border: none;
+    margin-top: 12px;
+    padding: 0;
+}
+
+QPushButton#heroButton {
+    background: #1e88e5;
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 16px;
+    padding: 20px 28px;
+    border-radius: 16px;
+    border: none;
+}
+
+QPushButton#heroButton:hover {
+    background: #1565c0;
+}
+
+QPushButton#heroButton:pressed {
+    background: #0d47a1;
 }
 
 QLabel#posTitle,

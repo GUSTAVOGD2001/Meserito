@@ -81,6 +81,7 @@ class EmployeeManagementDialog(QDialog):
 
         self.add_button = QPushButton("Agregar empleado")
         self.add_button.setObjectName("primaryButton")
+        self.add_button.setMinimumHeight(48)
         self.add_button.clicked.connect(self._add_employee)
 
         add_form_layout = QVBoxLayout()
@@ -110,6 +111,7 @@ class EmployeeManagementDialog(QDialog):
 
         self.update_button = QPushButton("Cambiar PIN")
         self.update_button.setObjectName("primaryButton")
+        self.update_button.setMinimumHeight(48)
         self.update_button.clicked.connect(self._change_pin)
 
         update_form_layout = QVBoxLayout()
@@ -123,6 +125,7 @@ class EmployeeManagementDialog(QDialog):
 
         self.delete_button = QPushButton("Eliminar mesero")
         self.delete_button.setObjectName("secondaryButton")
+        self.delete_button.setMinimumHeight(48)
         self.delete_button.clicked.connect(self._delete_employee)
 
         form_container.addWidget(self.delete_button, alignment=Qt.AlignmentFlag.AlignRight)
@@ -140,6 +143,11 @@ class EmployeeManagementDialog(QDialog):
         root_layout.addWidget(card)
         self.resize(900, 540)
 
+        self._load_employees()
+        self._update_actions()
+
+    def showEvent(self, event) -> None:  # type: ignore[override]
+        super().showEvent(event)
         self._load_employees()
         self._update_actions()
 
