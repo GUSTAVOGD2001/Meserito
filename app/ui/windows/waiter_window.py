@@ -154,7 +154,9 @@ class WaiterWindow(QMainWindow):
         super().__init__(parent)
         self.waiter = waiter
         self.session_factory = session_factory
-        self.setWindowTitle(f"Meserito - Mesero {waiter.name}")
+        self.current_waiter_id = waiter.id
+        self.current_waiter_name = waiter.name
+        self.setWindowTitle(f"Meserito — Mesero {waiter.name}")
         self.selected_table_id: Optional[int] = None
         self.current_order_id: Optional[int] = None
         self.tables_by_id: Dict[int, Table] = {}
@@ -187,6 +189,19 @@ class WaiterWindow(QMainWindow):
         sidebar_layout = QVBoxLayout(self.sidebar)
         sidebar_layout.setContentsMargins(12, 24, 12, 24)
         sidebar_layout.setSpacing(12)
+
+        self.session_label = QLabel(f"Sesión: {self.current_waiter_name}")
+        self.session_label.setObjectName("sessionLabel")
+        self.session_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.session_label.setWordWrap(True)
+
+        self.role_label = QLabel("Mesero")
+        self.role_label.setObjectName("sessionRoleLabel")
+        self.role_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        sidebar_layout.addWidget(self.session_label)
+        sidebar_layout.addWidget(self.role_label)
+        sidebar_layout.addSpacing(12)
 
         style = self.style()
         nav_items = [
@@ -237,6 +252,7 @@ class WaiterWindow(QMainWindow):
         self.products_scroll = QScrollArea()
         self.products_scroll.setObjectName("productsScroll")
         self.products_scroll.setWidgetResizable(True)
+        self.products_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.products_widget = QWidget()
         self.products_layout = QGridLayout(self.products_widget)
         self.products_layout.setContentsMargins(0, 0, 0, 0)
@@ -290,6 +306,7 @@ class WaiterWindow(QMainWindow):
         self.items_scroll = QScrollArea()
         self.items_scroll.setObjectName("orderScroll")
         self.items_scroll.setWidgetResizable(True)
+        self.items_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.items_scroll.setFrameShape(QFrame.Shape.NoFrame)
         self.items_widget = QWidget()
         self.items_layout = QVBoxLayout(self.items_widget)
@@ -344,6 +361,7 @@ class WaiterWindow(QMainWindow):
         main_layout.addWidget(self.order_panel, 0)
 
         self.setCentralWidget(central)
+        central.setStyleSheet(central.styleSheet() + "\nQScrollBar:horizontal { height: 0px; }")
         self._clear_order_detail()
 
     def _load_tables(self, preserve_selection: bool = False) -> None:
