@@ -39,23 +39,24 @@ def seed_database() -> None:
             session.add_all(categories)
             session.flush()
             menu_items = [
-                ("Café americano", 3500, 0),
-                ("Café latte", 4200, 0),
-                ("Jugo de naranja", 3800, 0),
-                ("Chilaquiles", 7500, 1),
-                ("Hotcakes", 6500, 1),
-                ("Hamburguesa", 9500, 2),
-                ("Ensalada", 8200, 2),
-                ("Pasta Alfredo", 10200, 2),
-                ("Pastel de chocolate", 5600, 3),
-                ("Helado", 4200, 3),
+                ("Café americano", 3500, 0, None),
+                ("Café latte", 4200, 0, None),
+                ("Jugo de naranja", 3800, 0, None),
+                ("Chilaquiles", 7500, 1, None),
+                ("Hotcakes", 6500, 1, None),
+                ("Hamburguesa", 9500, 2, None),
+                ("Ensalada", 8200, 2, None),
+                ("Pasta Alfredo", 10200, 2, None),
+                ("Pastel de chocolate", 5600, 3, None),
+                ("Helado", 4200, 3, None),
             ]
-            for name, price, cat_index in menu_items:
+            for name, price, cat_index, image_path in menu_items:
                 session.add(
                     MenuItem(
                         name=name,
                         price_cents=price,
                         category_id=categories[cat_index].id,
+                        image_path=image_path,
                     )
                 )
         session.commit()

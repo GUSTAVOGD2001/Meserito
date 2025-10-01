@@ -17,6 +17,12 @@ class EventBus:
         if callback not in self._subscribers[event]:
             self._subscribers[event].append(callback)
 
+    def unsubscribe(self, event: str, callback: EventCallback) -> None:
+        if callback in self._subscribers[event]:
+            self._subscribers[event].remove(callback)
+            if not self._subscribers[event]:
+                del self._subscribers[event]
+
     def publish(self, event: str, payload: Dict[str, Any]) -> None:
         for callback in list(self._subscribers[event]):
             callback(payload)
