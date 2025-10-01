@@ -4,9 +4,9 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from PyQt6.QtCore import QEvent, QObject, Qt
-from PyQt6.QtGui import QFont, QGuiApplication
-from PyQt6.QtWidgets import QApplication, QHeaderView, QTableView, QTableWidget
+from PySide6.QtCore import QCoreApplication, QEvent, QObject, Qt
+from PySide6.QtGui import QFont, QGuiApplication
+from PySide6.QtWidgets import QApplication, QHeaderView, QTableView, QTableWidget
 from sqlalchemy import select
 
 from .db import Base, SessionLocal, engine, run_migrations
@@ -70,13 +70,27 @@ def apply_theme(app: QApplication) -> None:
 
 
 def _enable_high_dpi() -> None:
-    """Turn on the High-DPI flags to avoid blurred UI on modern displays."""
+    """
+    Activa HiDPI de forma compatible:
+    - En Qt6: solo ajusta la política de redondeo (HiDPI ya viene activo).
+    - En Qt5: activa AA_UseHighDpiPixmaps y AA_EnableHighDpiScaling si existen.
+    Debe llamarse ANTES de crear QApplication.
+    """
 
-    QGuiApplication.setHighDpiScaleFactorRoundingPolicy(
-        Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
-    )
-    QApplication.setAttribute(Qt.ApplicationAttribute.AA_EnableHighDpiScaling, True)
-    QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseHighDpiPixmaps, True)
+    # HiDPI fix (Qt6/Qt5-safe)
+    try:
+        QGuiApplication.setHighDpiScaleFactorRoundingPolicy(
+            Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
+        )
+    except AttributeError:
+        pass
+
+    for attr_name in ("AA_EnableHighDpiScaling", "AA_UseHighDpiPixmaps"):
+        try:
+            attr = getattr(Qt.ApplicationAttribute, attr_name)
+        except AttributeError:
+            continue
+        QCoreApplication.setAttribute(attr, True)
 
 
 def seed_database() -> None:
