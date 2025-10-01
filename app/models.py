@@ -107,6 +107,8 @@ class Order(Base):
     subtotal_cents: Mapped[int] = mapped_column(Integer, default=0)
     tax_cents: Mapped[int] = mapped_column(Integer, default=0)
     total_cents: Mapped[int] = mapped_column(Integer, default=0)
+    payment_type: Mapped[Optional[str]] = mapped_column(String(50))
+    card_last4: Mapped[Optional[str]] = mapped_column(String(4))
 
     table: Mapped[Table] = relationship(back_populates="orders", foreign_keys=[table_id])
     waiter: Mapped[Waiter] = relationship(back_populates="orders")
@@ -155,6 +157,8 @@ class Ticket(Base):
     type: Mapped[str] = mapped_column(String(50), default="cliente", nullable=False)
     file_path: Mapped[str] = mapped_column(String(500), nullable=False)
     created_at: Mapped[datetime] = mapped_column(default=func.now(), nullable=False)
+    payment_type: Mapped[Optional[str]] = mapped_column(String(50))
+    card_last4: Mapped[Optional[str]] = mapped_column(String(4))
 
     order: Mapped[Order] = relationship(back_populates="tickets")
 

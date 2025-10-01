@@ -64,6 +64,9 @@ class TableService:
         table_id: int,
         payment_method: str | None = None,
         payment_amount_cents: int | None = None,
+        *,
+        payment_type: str | None = None,
+        card_last4: str | None = None,
     ) -> Order:
         table = self.get_table(table_id)
         if not table.current_order_id:
@@ -76,9 +79,21 @@ class TableService:
         table.current_order_id = None
         table.status = "free"
         self._update_order_aggregations(order)
-        if payment_method:
+        if payment_type:
+            order.payment_type = payment_type
+        elif payment_method:
+            order.payment_type = payment_method
+        else:
+            order.payment_type = None
+        if card_last4:
+            order.card_last4 = card_last4
+        else:
+            order.card_last4 = None
+
+        normalized_method = payment_method or (payment_type.lower() if payment_type else None)
+        if normalized_method:
             amount = payment_amount_cents if payment_amount_cents is not None else order.total_cents
-            payment = Payment(order_id=order.id, method=payment_method, amount_cents=amount)
+            payment = Payment(order_id=order.id, method=normalized_method, amount_cents=amount)
             self.session.add(payment)
         self.session.flush()
         event_bus.publish("table_status_changed", {"table_id": table.id, "status": table.status})
