@@ -13,6 +13,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -110,7 +111,12 @@ class Order(Base):
     table: Mapped[Table] = relationship(back_populates="orders", foreign_keys=[table_id])
     waiter: Mapped[Waiter] = relationship(back_populates="orders")
     items: Mapped[List["OrderItem"]] = relationship(back_populates="order", cascade="all, delete-orphan")
-    ticket: Mapped[Optional["Ticket"]] = relationship(back_populates="order", uselist=False)
+    tickets: Mapped[List["Ticket"]] = relationship(
+        back_populates="order", cascade="all, delete-orphan"
+    )
+    payments: Mapped[List["Payment"]] = relationship(
+        back_populates="order", cascade="all, delete-orphan"
+    )
 
     __table_args__ = (
         CheckConstraint("covers >= 1", name="ck_orders_covers_positive"),
@@ -145,13 +151,28 @@ class Ticket(Base):
     __tablename__ = "tickets"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    order_id: Mapped[int] = mapped_column(ForeignKey("orders.id"), nullable=False, unique=True)
-    number: Mapped[int] = mapped_column(Integer, nullable=False, unique=True)
-    payload_json: Mapped[str] = mapped_column(Text, nullable=False)
-    total_cents: Mapped[int] = mapped_column(Integer, nullable=False)
+    order_id: Mapped[int] = mapped_column(ForeignKey("orders.id"), nullable=False)
+    type: Mapped[str] = mapped_column(String(50), default="cliente", nullable=False)
+    file_path: Mapped[str] = mapped_column(String(500), nullable=False)
     created_at: Mapped[datetime] = mapped_column(default=func.now(), nullable=False)
 
-    order: Mapped[Order] = relationship(back_populates="ticket")
+    order: Mapped[Order] = relationship(back_populates="tickets")
+
+    __table_args__ = (
+        UniqueConstraint("order_id", "type", name="uq_tickets_order_type"),
+    )
+
+
+class Payment(Base):
+    __tablename__ = "payments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    order_id: Mapped[int] = mapped_column(ForeignKey("orders.id"), nullable=False)
+    method: Mapped[str] = mapped_column(String(50), nullable=False)
+    amount_cents: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(default=func.now(), nullable=False)
+
+    order: Mapped[Order] = relationship(back_populates="payments")
 
 
 class Setting(Base):
